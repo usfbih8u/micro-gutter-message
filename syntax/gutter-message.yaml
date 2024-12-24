@@ -1,0 +1,10 @@
+filetype: gutter-message # NOTE: MUST be equal to the `filetype` set in `Tooltip.new()`.
+detect:
+    filename: "^Gutter Message$" # NOTE: MUST be equal to `Plugin.name`.
+
+rules:
+    - identifier.gutter_msg: ".+"
+    # NOTE: strings used in `HeaderFromMessage()` format.
+    - identifier.gutter_msg.error: "\\[ERROR\\]"
+    - identifier.gutter_msg.warn:  "\\[WARN\\]"
+    - identifier.gutter_msg.info:  "\\[INFO\\]"

@@ -471,11 +471,11 @@ function preAddTab(_) IfTooltipCloseIt("preAddTab"); return true end
 --Reset the plugin when the BufPane is changed (tabs or splits). If the buffer is
 --replaced, we need to save it to run the linter, so the plugin will be reset as well.
 
-function onPreviousTab(_)   PluginReset("onPreviousTab") end
-function onNextTab(_)       PluginReset("onNextTab") end
-function onNextSplit(_)     PluginReset("onNextSplit") end
-function onPreviousSplit(_) PluginReset("onPreviousSplit") end
-function onUnsplit(_)       PluginReset("onUnsplit") end
+function prePreviousTab(_)   PluginReset("prePreviousTab") end
+function preNextTab(_)       PluginReset("preNextTab") end
+function preNextSplit(_)     PluginReset("preNextSplit") end
+function prePreviousSplit(_) PluginReset("prePreviousSplit") end
+function preUnsplit(_)       PluginReset("preUnsplit") end
 
 ---NOTE: This is mandatory to handle; otherwise, the Vsplit will be created
 ---inside the Tooltip, resulting in an Hsplit. `onAnyEvent()` catches this too late.

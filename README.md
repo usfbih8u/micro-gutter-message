@@ -2,7 +2,7 @@
 
 Navigate through the BufPane gutter messages and display them in a tooltip.
 
-## How to use it
+## ❓ How to use it
 
 Insert in the command bar `> gutter_message` and hit `ENTER`; by default, the plugin will go to the next message.
 
@@ -16,7 +16,7 @@ Insert in the command bar `> gutter_message` and hit `ENTER`; by default, the pl
 - `dprev`: Go to the previous message from the current location and display the tooltip.
 - `display`: Display the tooltip.
 
-## Syntax and Colorscheme
+## 🎨 Syntax and Colorscheme
 
 To improve readability, a custom syntax and colorscheme are provided until Micro allows customization of colorschemes per buffer.
 
@@ -31,7 +31,7 @@ include "autocomplete-tooltip" # 👀
 
 You can **change the colors** inside `colorschemes/gutter-message.micro`.
 
-## Installation
+## 📦 Installation
 
 **Do NOT change the name of the plugin directory `micro-gutter-message`**.  It is used as a prefix to avoid path collisions in `package.path` when requiring modules.
 

@@ -1,4 +1,4 @@
-VERSION = "0.0.1"
+VERSION = "0.0.3"
 
 local micro   = import("micro")
 local config  = import("micro/config")
@@ -66,19 +66,35 @@ local function PluginReset(from)
     Plugin.msgIdx = nil
 end
 
----@enum (key) GoDirection
----Direction to go in `GoMessageFromCurrentLoc()`
+---Generate the header message (owner + kind).
+---@param msg Message The gutter message to format.
+---@return string # The formatted message.
+local function HeaderFromMessage(msg)
+    assert(msg)
+    local MESSAGE = { INFO = 0, WARN = 1, ERROR = 2 }
+    local typeStr
+    if     msg.Kind == MESSAGE.INFO  then typeStr = "INFO"
+    elseif msg.Kind == MESSAGE.WARN  then typeStr = "WARN"
+    elseif msg.Kind == MESSAGE.ERROR then typeStr = "ERROR"
+    else error("unknown kind of MsgType.") end
+    return string.format("[%s] %s", typeStr, msg.Owner)
+end
+
+---@enum Direction Direction to go in `GoMessageFromCurrentLoc()`
 local GODIRECTION = { NEXT = 1, PREV = -1}
+---@type string Separator used to split the gutter message by " ".
+local SEPARATOR = " \n "
 
 ---Sorts messages by line and column, merging them if they are in the same location.
 ---@param msgs Message[] Messages from the Buffer.
----@return Message[] List of Messages (same structure as the input).
+---@return table<Loc, string> List of Messages (StartLoc of the message and Message).
 local function SortAndMergeMsgs(msgs)
     local msgsTable = {}
     for i = 1, #msgs do
         local msg = msgs[i]
         table.insert(msgsTable, {
-            Msg   = msg.Msg,
+            -- NOTE: Use spaces around "\n" to split later by " "
+            Msg   = msg.Msg:gsub("\n", SEPARATOR),
             Start = { X = msg.Start.X, Y = msg.Start.Y},
             End   = { X = msg.End.X,   Y = msg.End.Y},
             Kind  = msg.Kind,
@@ -89,23 +105,68 @@ local function SortAndMergeMsgs(msgs)
     table.sort(msgsTable, function (a, b) --start to end
         local aS = a.Start
         local bS = b.Start
-        return aS.Y < bS.Y or (aS.Y == bS.Y and aS.X < bS.X)
+        return aS.Y < bS.Y -- by line
+               or (aS.Y == bS.Y and aS.X < bS.X) -- by column
+               or (aS.Y == bS.Y and aS.X == bS.X and a.Kind > b.Kind)
+               or (aS.Y == bS.Y and aS.X == bS.X and a.Kind == b.Kind and a.Owner < b.Owner)
     end)
 
     --merge any messages with the same Start
+    ---@type table<Loc, string> -- I will have to name Start the location!!!
+    local gutterMessages = {}
+    ---@type { [string]: string[] }
+    local mergeLines = {}
+    ---@type Loc|nil
+    local mergeStartLoc = nil
     local i = 1
     while i < #msgsTable - 1 do
         if msgsTable[i].Start.X == msgsTable[i+1].Start.X and
            msgsTable[i].Start.Y == msgsTable[i+1].Start.Y
         then
-            --NOTE: Use spaces around "\n" to split later by " "
-            msgsTable[i].Msg = "* " .. msgsTable[i].Msg .. " \n " ..
-                               "* " .. table.remove(msgsTable, i + 1).Msg
+            mergeStartLoc = msgsTable[i].Start
+            local key = HeaderFromMessage(msgsTable[i])
+            if mergeLines[key] == nil then mergeLines[key] = {} end
+            table.insert(mergeLines[key], msgsTable[i].Msg)
+
+        else
+            if next(mergeLines) then -- not empty
+                local key = HeaderFromMessage(msgsTable[i])
+                if mergeLines[key] == nil then mergeLines[key] = {} end
+                table.insert(mergeLines[key], msgsTable[i].Msg)
+
+                ---@type string[]
+                local text = {}
+                for header, lines in pairs(mergeLines) do
+                    assert(type(lines) == "table")
+                    table.insert(text, header)
+                    if #lines == 1 then
+                        table.insert(text, lines[1])
+                    else
+                        for _, line in ipairs(lines) do
+                            -- NOTE: syntaxis: identifier.gutter_msg.bullet
+                            table.insert(text, "* " .. line)
+                        end
+                    end
+                end
+
+                local message = table.concat(text, SEPARATOR)
+                table.insert(gutterMessages, {
+                    Start = mergeStartLoc,
+                    Msg = message
+                })
+                mergeLines = {}
+
+            else -- single message, nothing to merge
+                table.insert(gutterMessages, {
+                    Start = msgsTable[i].Start,
+                    Msg = HeaderFromMessage(msgsTable[i]) .. SEPARATOR .. msgsTable[i].Msg
+                })
+            end
         end
         i = i + 1
     end
 
-    return msgsTable
+    return gutterMessages
 end
 
 ---Checks if the BufPane `bp` has any messages
@@ -119,7 +180,7 @@ end
 ---starting from the given location `loc`.
 ---@param bp BufPane The BufPane to search.
 ---@param loc Loc The starting location.
----@param direction GoDirection The direction in which to search for the message.
+---@param direction Direction The direction in which to search for the message.
 ---@return boolean `true` if a message was found, `false` otherwise.
 local function GoMessageFromCurrentLoc(bp, loc, direction)
     if not HasMessages(bp) then
@@ -160,8 +221,8 @@ end
 ---Go to the previous message in the `bp` BufPane.
 ---@param bp BufPane The BufPane to navigate through.
 local function PrevMessage(bp)
-    local curLoc = bp.Cursor.Loc
-    if not GoMessageFromCurrentLoc(bp, -curLoc, GODIRECTION.PREV) then
+    local curLoc = -bp.Cursor.Loc
+    if not GoMessageFromCurrentLoc(bp, curLoc, GODIRECTION.PREV) then
         micro.InfoBar():Error(string.format("%s: No messages in %s", plugName, bp:Name()))
         return false
     end
@@ -200,20 +261,6 @@ local function HasCurrentLineMessage(bp)
     return false
 end
 
----Generate the header message (owner + kind).
----@param msg Message The gutter message to format.
----@return string # The formatted message.
-local function HeaderFromMessage(msg)
-    assert(msg)
-    local MESSAGE = { INFO = 0, WARN = 1, ERROR = 2 }
-    local typeStr
-    if     msg.Kind == MESSAGE.INFO  then typeStr = "INFO"
-    elseif msg.Kind == MESSAGE.WARN  then typeStr = "WARN"
-    elseif msg.Kind == MESSAGE.ERROR then typeStr = "ERROR"
-    else error("unknown kind of MsgType.") end
-    return string.format("[%s] %s", typeStr, msg.Owner)
-end
-
 ---Displays the tooltip with the message formatted.
 ---@param bp BufPane The BufPane where the tooltip will be displayed.
 ---@param chained boolean Indicates if the function is called in a chain with Next/PrevMessage().
@@ -230,12 +277,6 @@ local function DisplayMessage(bp, chained)
     local maxTooltipWidth = screen.Width - 4 -- minus 4 columns for example
 
     local gutterMsg = Plugin.gutterMsgs[Plugin.msgIdx]
-    local header = HeaderFromMessage(gutterMsg)
-    local headerLen = util.CharacterCountInString(header)
-    --NOTE: `linter` plugin only returns 1 line as Msg
-    local messageLen = util.CharacterCountInString(gutterMsg.Msg)
-    local longestLine = headerLen < messageLen and messageLen or headerLen
-
     local cursorScreen = TooltipModule.ScreenLocFromBufLoc(bp, gutterMsg.Start)
 
     local spaceRight = screen.Width - cursorScreen.X
@@ -251,72 +292,62 @@ local function DisplayMessage(bp, chained)
         width = spaceRight
     end
 
-    -- NOTE now we split longestLine if needed!
-    local message
-    local tooltipHeight
-    local splitMessage = longestLine > width and true or false
-    if not splitMessage then
-        message = gutterMsg.Msg
-        tooltipHeight = 3 -- 1:header + 1:msg + 1:statusline
+    -- Split by word to create the lines with the correct length
+    local msgWordsArray = strings.SplitAfter(gutterMsg.Msg, " ")
+    local words = {}
+    local breaks = {}
+    local lastValidIdx = 1
+    local currentLen = 0
+    for i = 1, #msgWordsArray do
+        local len = util.CharacterCountInString(msgWordsArray[i])
+        currentLen = currentLen + len
 
-    else
-        local msgWordsArray = strings.SplitAfter(gutterMsg.Msg, " ")
-
-        local words = {}
-        local breaks = {}
-        local lastValidIdx = 1
-        local currentLen = 0
-        for i = 1, #msgWordsArray do
-            local len = util.CharacterCountInString(msgWordsArray[i])
-            currentLen = currentLen + len
-
-            if len == 2 and string.sub(msgWordsArray[i], 1, 1) == "\n" then
-                msgWordsArray[i] = ""
-                table.insert(breaks, lastValidIdx)
-                currentLen = 0
-            end
-
-            if currentLen > width - 1 then --NOTE -1 make space for \n for concat
-                table.insert(breaks, lastValidIdx)
-                currentLen = len
-            else
-                lastValidIdx = i
-            end
-
-            table.insert(words, msgWordsArray[i])
+        -- Newline (separator ' \n ')
+        if len == 2 and string.sub(msgWordsArray[i], 1, 1) == "\n" then
+            msgWordsArray[i] = ""
+            table.insert(breaks, lastValidIdx)
+            currentLen = 0
         end
 
-        local idx = 1
-        local msgLines = {}
-        local msgLineLengths = {}
-        for _, br in ipairs(breaks) do
-            local line = table.concat(words, "", idx, br)
-            line = strings.TrimRight(line, " ")
-            local lineLen = util.CharacterCountInString(line)
-            table.insert(msgLines, line)
-            table.insert(msgLineLengths, lineLen)
-            idx = br + 1
+        if currentLen > width - 1 then --NOTE -1 make space for \n for concat
+            table.insert(breaks, lastValidIdx)
+            currentLen = len
+        else
+            lastValidIdx = i
         end
 
-        --last line remaining
-        local line = table.concat(words, "", idx, #words)
+        table.insert(words, msgWordsArray[i])
+    end
+
+    -- compose the lines with the words and breaks (newlines)
+    local idx = 1
+    local msgLines = {}
+    local msgLineLengths = {}
+    for _, br in ipairs(breaks) do
+        local line = table.concat(words, "", idx, br)
+        line = strings.TrimRight(line, " ")
         local lineLen = util.CharacterCountInString(line)
         table.insert(msgLines, line)
         table.insert(msgLineLengths, lineLen)
-
-        longestLine = math.max(unpack(msgLineLengths))
-        assert(longestLine < width - 1, "leave space for \n to line concat")
-
-        local lineCount = #msgLines
-        for i = 1, lineCount do
-            local pad = longestLine - msgLineLengths[i]
-            msgLines[i] = msgLines[i] .. string.rep(" ", pad)
-        end
-
-        tooltipHeight = 2 + lineCount -- 1:header + 1:statusline + lineCount
-        message = table.concat(msgLines, "\n")
+        idx = br + 1
     end
 
+    --last line remaining
+    local line = table.concat(words, "", idx, #words)
+    local lineLen = util.CharacterCountInString(line)
+    table.insert(msgLines, line)
+    table.insert(msgLineLengths, lineLen)
+
+    --pad the lines
+    local longestLine = math.max(unpack(msgLineLengths))
+    local lineCount = #msgLines
+    for i = 1, lineCount do
+        local pad = longestLine - msgLineLengths[i]
+        msgLines[i] = msgLines[i] .. string.rep(" ", pad)
+    end
+
+    local tooltipHeight = 1 + lineCount -- 1:statusline + lineCount
+    local tooltipText = table.concat(msgLines, "\n")
     local tooltipWidth = longestLine + 1 -- + 1 space for \n
 
     local shiftY
@@ -339,11 +370,6 @@ local function DisplayMessage(bp, chained)
         shiftY = 1
     end
 
-    local tooltipText = string.format("%s%s\n%s",
-        header, string.rep(" ", longestLine - headerLen),
-        message
-    )
-
     assert(not Plugin.tooltip, "tooltip should arrive as nil")
     Plugin.tooltip = TooltipModule.Tooltip.new(
         Plugin.name, tooltipText,
@@ -355,8 +381,6 @@ local function DisplayMessage(bp, chained)
             ["softwrap"] = true,
             ["diffgutter"] = false,
             ["statusline"] = false,
-            ["statusformatl"] = "$(filename)",
-            ["statusformatr"] = "",
     })
 end
 
@@ -406,7 +430,7 @@ end
 
 ---Plugin option completer
 ---@param buf Buffer InfoBar's Buffer
----@return table<string>, table<string> # completions and suggestions
+---@return string[]?, string[]? # completions and suggestions
 local function PluginCompleter(buf)
     local opts = {}
 

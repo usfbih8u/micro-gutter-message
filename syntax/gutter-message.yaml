@@ -8,3 +8,5 @@ rules:
     - identifier.gutter_msg.error: "\\[ERROR\\]"
     - identifier.gutter_msg.warn:  "\\[WARN\\]"
     - identifier.gutter_msg.info:  "\\[INFO\\]"
+    - identifier.gutter_msg.owner: " .+​" # space, any and "u200B"
+    - identifier.gutter_msg.bullet: "^\\* " # spaces

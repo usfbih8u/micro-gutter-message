@@ -77,7 +77,7 @@ local function HeaderFromMessage(msg)
     elseif msg.Kind == MESSAGE.WARN  then typeStr = "WARN"
     elseif msg.Kind == MESSAGE.ERROR then typeStr = "ERROR"
     else error("unknown kind of MsgType.") end
-    return string.format("[%s] %s", typeStr, msg.Owner)
+    return string.format("[%s] %s%s", typeStr, msg.Owner, string.char(0xE2, 0x80, 0x8B)) -- "\u200B"
 end
 
 ---@enum Direction Direction to go in `GoMessageFromCurrentLoc()`

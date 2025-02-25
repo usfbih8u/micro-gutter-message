@@ -1,4 +1,6 @@
 color-link identifier.gutter_msg.error "#fc2f3d,#2E2E2E"
 color-link identifier.gutter_msg.warn  "#fcb12f,#2E2E2E"
 color-link identifier.gutter_msg.info  "#fceb2f,#2E2E2E"
+color-link identifier.gutter_msg.owner "bold white,#2E2E2E"
+color-link identifier.gutter_msg.bullet "bold red,#2E2E2E"
 color-link identifier.gutter_msg       "#FFFFFF,#2E2E2E"

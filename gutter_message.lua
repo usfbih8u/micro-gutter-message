@@ -444,7 +444,10 @@ local function PluginCompleter(buf)
 end
 
 function init()
-    package.path = config.ConfigDir .. "/plug/?.lua;" .. package.path
+    local plugDirPath = config.ConfigDir .. "/plug/?.lua;"
+    if string.find(package.path, plugDirPath, 1, true) == nil then
+        package.path = plugDirPath .. package.path
+    end
     config.MakeCommand(plugName, PluginEntry, PluginCompleter)
     config.AddRuntimeFile(plugName, config.RTSyntax, "syntax/gutter-message.yaml")
     TooltipModule = require('micro-gutter-message.tooltip')

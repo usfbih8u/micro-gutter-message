@@ -467,7 +467,12 @@ function init()
     end
     config.MakeCommand(plugName, PluginEntry, PluginCompleter)
     config.AddRuntimeFile(plugName, config.RTSyntax, "syntax/gutter-message.yaml")
-    TooltipModule = require('micro-gutter-message.tooltip')
+    local ok, module = pcall(require, 'micro-gutter-message.tooltip')
+    if ok then -- Cloned as micro-gutter-message
+        TooltipModule = module
+    else -- Downloaded from Micro as gutter_message
+        TooltipModule = require(plugName .. '.tooltip')
+    end
 end
 
 ---If we are quitting the tooltip's BufPane, we intercept Quit() and use Tooltip:Close().

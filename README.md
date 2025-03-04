@@ -33,6 +33,18 @@ You can **change the colors** inside `colorschemes/gutter-message.micro`.
 
 ## 📦 Installation
 
-**Do NOT change the name of the plugin directory `micro-gutter-message`**.  It is used as a prefix to avoid path collisions in `package.path` when requiring modules.
+⚠️ **Do NOT change the name of the plugin directory**.  It is used as a prefix to avoid path collisions in `package.path` when requiring modules.
 
-In Linux, you can clone the repo anywhere and create a symlink inside `.config/micro/plug` using the `ENABLE_FOR_MICRO.sh` script.
+You can install this from the [unofficial micro plugin channel](https://github.com/Neko-Box-Coder/unofficial-plugin-channel) by adding the following to your `settings.json`
+
+```json
+"pluginchannels": [
+    "https://raw.githubusercontent.com/Neko-Box-Coder/unofficial-plugin-channel/main/channel.json"
+]
+```
+
+Then do `micro -plugin install gutter_message`.
+
+Alternatively, you can copy/clone this directly to your `.config/micro/plug`.
+
+In Linux, you can copy/clone the repo anywhere and create a symlink inside `.config/micro/plug` using the `ENABLE_FOR_MICRO.sh` script.

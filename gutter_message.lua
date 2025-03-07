@@ -1,4 +1,4 @@
-VERSION = "0.0.3"
+VERSION = "0.0.4"
 
 local micro   = import("micro")
 local config  = import("micro/config")
@@ -395,7 +395,7 @@ local function DisplayMessage(bp, chained)
             ["diff"] = false,
             ["ruler"] = false,
             ["filetype"] = "gutter-message", --NOTE: MUST be equal to syntax value
-            ["softwrap"] = true,
+            ["softwrap"] = false,
             ["diffgutter"] = false,
             ["statusline"] = false,
     })

@@ -443,7 +443,6 @@ function PluginEntry(bp, args)
     end
 end
 
-
 ---Plugin option completer
 ---@param buf Buffer InfoBar's Buffer
 ---@return string[]?, string[]? # completions and suggestions
@@ -571,7 +570,7 @@ function onSave(bp)
     PluginReset("onSave")
 end
 
-function preMousePress(bp)
+function preMousePress(_)
     if Plugin.tooltip and not Plugin.tooltip:IsClosing() then
         Plugin.tooltip = Plugin.tooltip:Close()
         return false

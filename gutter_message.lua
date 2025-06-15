@@ -227,22 +227,24 @@ local function GetMergedMessage()
         end
     end
 
-    --Merge messages if necessary
+    ---@param to { [string]: string[] }
+    ---@param msg Message
+    local appendMsg = function(to, msg)
+        local key = HeaderFromMessage(msg)
+        if to[key] == nil then to[key] = {} end
+        table.insert(to[key], msg.Msg)
+    end
 
     while firstIdx <= #Messages do -- upper limit
         if firstIdx ~= #Messages
         and Messages[firstIdx].Start.X == Messages[firstIdx+1].Start.X
         and Messages[firstIdx].Start.Y == Messages[firstIdx+1].Start.Y
         then -- message with same start will be appended by owner+kind
-            local key = HeaderFromMessage(Messages[firstIdx])
-            if mergeLines[key] == nil then mergeLines[key] = {} end
-            table.insert(mergeLines[key], Messages[firstIdx].Msg)
+            appendMsg(mergeLines, Messages[firstIdx])
 
         else -- last message or different start
             if next(mergeLines) then -- not empty
-                local key = HeaderFromMessage(Messages[firstIdx])
-                if mergeLines[key] == nil then mergeLines[key] = {} end
-                table.insert(mergeLines[key], Messages[firstIdx].Msg)
+                appendMsg(mergeLines, Messages[firstIdx])
 
                 ---@type string[]
                 local text = {}

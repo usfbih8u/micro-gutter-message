@@ -229,19 +229,16 @@ local function GetMergedMessage()
 
     --Merge messages if necessary
 
-    if firstIdx == #Messages then --last message
-        return HeaderFromMessage(Messages[firstIdx]) .. SEPARATOR .. Messages[firstIdx].Msg
-    end
-
-    while firstIdx <= #Messages - 1 do -- upper limit
-        if Messages[firstIdx].Start.X == Messages[firstIdx+1].Start.X and
-           Messages[firstIdx].Start.Y == Messages[firstIdx+1].Start.Y
-        then
+    while firstIdx <= #Messages do -- upper limit
+        if firstIdx ~= #Messages
+        and Messages[firstIdx].Start.X == Messages[firstIdx+1].Start.X
+        and Messages[firstIdx].Start.Y == Messages[firstIdx+1].Start.Y
+        then -- message with same start will be appended by owner+kind
             local key = HeaderFromMessage(Messages[firstIdx])
             if mergeLines[key] == nil then mergeLines[key] = {} end
             table.insert(mergeLines[key], Messages[firstIdx].Msg)
 
-        else
+        else -- last message or different start
             if next(mergeLines) then -- not empty
                 local key = HeaderFromMessage(Messages[firstIdx])
                 if mergeLines[key] == nil then mergeLines[key] = {} end
